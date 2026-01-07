@@ -25,7 +25,6 @@ https://github.com/wilsonzlin/minify-html/blob/master/nodejs/postinstall.js
 */
 
 const fs = require('fs');
-const https = require('https');
 const path = require('path');
 const pkg = require('./package.json');
 const cp = require('child_process');
@@ -44,41 +43,32 @@ class StatusError extends Error {
   }
 }
 
-const fetch = url =>
-  new Promise((resolve, reject) => {
-    const stream = https.get(url, resp => {
-      if (!resp.statusCode || resp.statusCode < 200 || resp.statusCode > 299) {
-        return reject(new StatusError(resp.statusCode));
-      }
-      const parts = [];
-      resp.on('data', chunk => parts.push(chunk));
-      resp.on('end', () => resolve(Buffer.concat(parts)));
-    });
-    stream.on('error', reject);
-  });
-
-const downloadNativeBinary = async() => {
-  for (let attempt = 0; ; attempt++) {
+async function downloadNativeBinary() {
+  const url = `https://archive.zsq.im/hexo-word-counter/bin/nodejs/${pkg.version}/${binaryName}.node`;
+  console.log(`Downloading prebuilt binary from ${url}`);
+  for (let attempt = 0; attempt < MAX_DOWNLOAD_ATTEMPTS; attempt++) {
     let binary;
     try {
-      binary = await fetch(
-        `https://archive.zsq.im/hexo-word-counter/bin/nodejs/${pkg.version}/${binaryName}.node`
-      );
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new StatusError(response.status);
+      }
+      binary = Buffer.from(await response.arrayBuffer());
     } catch (e) {
       if (
         e instanceof StatusError
-        && e.status !== 404
-        && attempt < MAX_DOWNLOAD_ATTEMPTS
+        && e.status === 404
       ) {
-        await wait((Math.random() * 2500) + 500);
-        continue;
+        throw new Error('Prebuilt binary 404 not found');
       }
-      throw e;
+      await wait((Math.random() * 2500) + 500);
+      continue;
     }
 
     fs.writeFileSync(binaryPath, binary);
-    break;
+    return;
   }
+  throw new Error('Max download attempts reached');
 };
 
 if (
@@ -86,10 +76,10 @@ if (
   && !fs.existsSync(binaryPath)
 ) {
   downloadNativeBinary().then(
-    () => console.log(`Downloaded ${pkg.name}`),
+    () => console.log(`Downloaded ${binaryName}`),
     err => {
       console.error(
-        `Failed to download ${pkg.name}, will build from source: ${err}`
+        `Download failed: ${err}, will build from source`
       );
       const out = cp.spawnSync('npm', ['run', 'build-release'], {
         cwd: __dirname,
