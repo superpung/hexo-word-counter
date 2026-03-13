@@ -44,7 +44,7 @@ class StatusError extends Error {
 }
 
 async function downloadNativeBinary() {
-  const url = `https://archive.zsq.im/hexo-word-counter/bin/nodejs/${pkg.version}/${binaryName}.node`;
+  const url = `https://cdn.superpung.com/hexo-word-counter/bin/nodejs/${pkg.version}/${binaryName}.node`;
   console.log(`Downloading prebuilt binary from ${url}`);
   for (let attempt = 0; attempt < MAX_DOWNLOAD_ATTEMPTS; attempt++) {
     let binary;
