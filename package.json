@@ -1,5 +1,5 @@
 {
-  "name": "hexo-word-counter",
+  "name": "@repus/hexo-word-counter",
   "version": "0.2.2",
   "description": "Symbols count and time to read for articles.",
   "main": "index",
